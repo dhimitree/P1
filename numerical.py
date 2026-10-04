@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
-from mpl_toolkits.axesgrid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 #Parameters/Variables
 
@@ -54,3 +54,63 @@ def geometry(y, z, ys):
         p2 &= ~p1
     sh = rect_mask(y, z, ys, t_p +d)
     return p1, p2, sh
+
+#Laplace solver
+NEIGHBORS = [[0, 1], [0, -1], [1, 0], [-1, 0]] #4 NEIGHBOIRS for 2D sim
+
+def neighbor_index(jj, ii, dj, di, ny):
+    nj = jj + dj
+    ni = ii + di
+    ni = np.where(ni < 0, 1, ni)
+    ni = np.where(ni > ny - 1, ny -2, ni)
+    return nj, ni
+
+def solve_laplace(y, z, ys):
+    p1, p2, sh = geometry(y, z, ys)
+    return solve_with_conductors(y, z, p1 | p2 | sh)
+
+def solve_with_conductors(y, z, conductors):
+    nz, ny = len(z), len(y)
+
+    fixed = conductors.copy()
+    fixed[0, :] = True
+    fixed[-1, :] = True
+    v_fix = np.zeros((nz, ny))
+    v_fix[-1, :] = -Ez * H
+
+    free = ~fixed
+    jj, ii = np.nonzero(free)
+    n = jj.size
+    idx = np.full((nz,ny), -1, dtype=np.int64)
+    idx[jj, ii] = np.arange(n)
+
+    rows = [np.arange(n)]
+    cols = [np.arange(n)]
+    vals = [4 * np.ones(n)]
+    b = np.zeros(n)
+
+    for dj, di in NEIGHBORS:
+        nj, ni = neighbor_index(jj, ii, dj, di, ny)
+        nb_free = free[nj, ni]
+        rows.append(np.nonzero(nb_free)[0])
+        cols.append(idx[nj[nb_free], ni[nb_free]])
+        vals.append(-1 * np.ones(nb_free.sum()))
+        np.add.at(b, np.nonzero(-nb_free)[0], v_fix[nj[~nb_free], ni[~nb_free]])
+
+    A = sp.csr_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(n, n))
+    V= v_fix.copy()
+    V[jj, ii] = spla.spsolve(A, b)
+    return V
+
+def conductor_charge(V, mask):
+    ny = V.shape[1]
+    jj, ii = np.nonzero(mask)
+    q = 0
+    for dj, di in NEIGHBORS:
+        nj, ni = neighbor_index(jj, ii, dj, di, ny)
+        q += np.sum(V[jj[ok], ii[ok]] - V[nj[ok], ni[ok]])
+    return eps * q * L
+
+def plate_charges(V, y, z, ys):
+    p1, p2, _ = geometry(y, z, ys)
+    return conductor_charge(V, p1), conductor_charge(V, p2)
