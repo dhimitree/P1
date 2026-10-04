@@ -31,3 +31,26 @@ YS_CROSS_SECTION = 0 #(0 = shutter over plate 1)
 FIG_DIR = Path("figures")
 
 TOL = 1e-6
+
+#Creating the grid and geometry functions for the project
+#create the grid
+def make_grid():
+    ny = int(round((2 * W + gap + 2 * space)/h)) + 1
+    nz = int(round(H/h)) + 1
+    y = -space + h * np.arange(ny)
+    z = h * np.arange(nz)
+    return y, z
+
+#create and place the plates
+def rect_mask(y, z, y0, z0):
+    in_y = (y >= y0 - TOL) & (y <= y0+ W + TOL)
+    in_z = (z >= z0 - TOL) & (z <= z0 + t_p + TOL)
+    return np.outer(in_y, in_z)
+
+def geometry(y, z, ys):
+    p1 = rect_mask(y, z, 0, 0)
+    p2 = rect_mask(y, z, W + gap, 0)
+    if gap == 0:
+        p2 &= ~p1
+    sh = rect_mask(y, z, ys, t_p +d)
+    return p1, p2, sh
