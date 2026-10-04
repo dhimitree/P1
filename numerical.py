@@ -114,3 +114,16 @@ def conductor_charge(V, mask):
 def plate_charges(V, y, z, ys):
     p1, p2, _ = geometry(y, z, ys)
     return conductor_charge(V, p1), conductor_charge(V, p2)
+
+#Analytical model from Part 1
+#Exposed area of plate spans from point a to b with the shuter spanning (ys, ys + W) as ys changes as plate slides.
+
+def exposed_area(ys, a, b):
+    overlap = np.clip(np.minimum(ys + W, b) - np.maximum(ys, a), 0, None)
+    return L * ((b - a) - overlap)
+
+#application of Gauss' Law for the exposed area then solved for charge Q.
+def analytical_charges(ys):
+    Q1 = eps * Ez * exposed_area(ys, 0, W)
+    Q2 = eps * Ez * exposed_area(ys, W + gap, 2 * W + gap)
+    return Q1, Q2
