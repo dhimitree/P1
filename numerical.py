@@ -17,7 +17,7 @@ t_p = 1e-3
 gap = 0
 d = 5e-6
 v = 1
-R = 1
+R = 100000000
 
 #Grid parameters (spacing and overall system placement)
 #Values will be changed based on output
