@@ -13,9 +13,21 @@ SNAPSHOTS = {
 Y_LIM = (-8e-3, 2 * W + gap + 8e-3)
 Z_LIM = (0.0, 2 * t_p + d + 8e-3)
 
+def numerical_E(V):
+    dVdz, dVdy = np.gradient(V, h, h)
+    return np.hypot(dVdy, dVdz)
+
 def main():
     y, z = make_grid()
-    print(len(y), len(z))
+
+    V = solve_laplace(y, z, 0.0)     
+    E = numerical_E(V)
+
+    print("max |E|:", E.max())
+    plt.imshow(E, origin="lower", vmax=150)
+    plt.colorbar(label="|E| (V/m)")
+    plt.title("Test: numerical |E|")
+    plt.show()
 
 if __name__ == "__main__":
     main()
