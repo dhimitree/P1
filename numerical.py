@@ -45,7 +45,7 @@ def make_grid():
 def rect_mask(y, z, y0, z0):
     in_y = (y >= y0 - TOL) & (y <= y0+ W + TOL)
     in_z = (z >= z0 - TOL) & (z <= z0 + t_p + TOL)
-    return np.outer(in_y, in_z)
+    return np.outer(in_z, in_y)
 
 def geometry(y, z, ys):
     p1 = rect_mask(y, z, 0, 0)
@@ -95,7 +95,7 @@ def solve_with_conductors(y, z, conductors):
         rows.append(np.nonzero(nb_free)[0])
         cols.append(idx[nj[nb_free], ni[nb_free]])
         vals.append(-1 * np.ones(nb_free.sum()))
-        np.add.at(b, np.nonzero(-nb_free)[0], v_fix[nj[~nb_free], ni[~nb_free]])
+        np.add.at(b, np.nonzero(~nb_free)[0], v_fix[nj[~nb_free], ni[~nb_free]])
 
     A = sp.csr_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(n, n))
     V= v_fix.copy()
@@ -108,6 +108,7 @@ def conductor_charge(V, mask):
     q = 0
     for dj, di in NEIGHBORS:
         nj, ni = neighbor_index(jj, ii, dj, di, ny)
+        ok = (nj >= 0) & (nj < V.shape[0])
         q += np.sum(V[jj[ok], ii[ok]] - V[nj[ok], ni[ok]])
     return eps * q * L
 
