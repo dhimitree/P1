@@ -127,3 +127,42 @@ def analytical_charges(ys):
     Q1 = eps * Ez * exposed_area(ys, 0, W)
     Q2 = eps * Ez * exposed_area(ys, W + gap, 2 * W + gap)
     return Q1, Q2
+
+#Using charge to get currents and output voltage of amplifier
+def to_time_domain(ys, Q1, Q2, n_periods=2):
+    td = W + gap #td is total distance for gap and width combined two of these is the period (we are measuring from the left edge of sliding plate
+    T = 2 * td/v
+    dQ1 = np.gradient(Q1, ys, edge_order=2)
+    dQ2 = np.gradient(Q2, ys, edge_order=2)
+
+    t_f = ys/v #the forward velocity of the sliding plate is positive
+    I1_f, I2_f = v * dQ1, v* dQ2
+    t_r = T/2 + (td - ys[::-1])/v #going back it is negative
+    I1_r, I2_r = -v * dQ1[::-1], -v * dQ2[::-1]
+
+    t_one = np.concatenate([t_f, t_r])
+    I1_one = np.concatenate([I1_f, I1_r])
+    I2_one = np.concatenate([I2_f, I2_r])
+ 
+    t = np.concatenate([t_one + k * T for k in range(n_periods)])
+    I1 = np.tile(I1_one, n_periods)
+    I2 = np.tile(I2_one, n_periods)
+    Vout = R * (I2 - I1)
+    return t, Vout, T
+
+def main():
+    y, z = make_grid()
+    ys = np.unique(np.round(np.linspace(0, W + gap, n_pos) / h) * h)
+    Q1 = np.zeros_like(ys)
+    Q2 = np.zeros_like(ys)
+    for k, pos in enumerate(ys):
+        V = solve_laplace(y, z, pos)
+        Q1[k], Q2[k] = plate_charges(V, y, z, pos)
+    t, Vout, T = to_time_domain(ys, Q1, Q2)
+    print(f"Analytical |Vout| = {2*R*eps*E0*L*v*1e3:.4f} mV")
+    print(f"Numerical peak    = {np.max(np.abs(Vout))*1e3:.4f} mV")
+
+
+if __name__ == "__main__":
+    main()
+
