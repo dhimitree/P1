@@ -17,6 +17,15 @@ def numerical_E(V):
     dVdz, dVdy = np.gradient(V, h, h)
     return np.hypot(dVdy, dVdz)
 
+def draw_plates(ax, ys):
+    for y0, z0, color in [(0, 0, "0.8"), (W + gap, 0, "0.8"), (ys, t_p + d, "0.5")]:
+        ax.add_patch(Rectangle((y0 * 1e3, z0 * 1e3), W * 1e3, t_p * 1e3,
+                               facecolor=color, edgecolor="k", lw=0.8))
+    ax.set_xlim(Y_LIM[0] * 1e3, Y_LIM[1] * 1e3)
+    ax.set_ylim(Z_LIM[0] * 1e3, Z_LIM[1] * 1e3)
+    ax.set_aspect("equal")
+    ax.set_ylabel("z (mm)")
+
 def analytical_E(y, z, ys):
     z_stop = np.zeros_like(y)                                   
     z_stop[(y >= -TOL) & (y <= 2 * W + gap + TOL)] = t_p        
@@ -26,33 +35,17 @@ def analytical_E(y, z, ys):
 def main():
     y, z = make_grid()
 
-    ys = 0.0
-    V = solve_laplace(y, z, ys)     
-    E = numerical_E(V)
-    
-    E_ana = analytical_E(y, z, 0.0)
+    fig_n, axs_n = plt.subplots(3, 1, figsize=(10, 7.5), layout="constrained")
 
-    dE = numerical_E(V) - analytical_E(y, z, ys)
-    p1, p2, sh = geometry(y, z, ys)
-    dE[p1 | p2 | sh] = 0              
-    dE[0, :] = 0
+    for (name, ys), ax_n in zip(SNAPSHOTS.items(), axs_n):
+        ys = np.round(ys / h) * h                # snap shutter to the grid
+        V = solve_laplace(y, z, ys)
+        E_num = numerical_E(V)
 
-    print("values:", np.unique(E_ana))
-    plt.imshow(E_ana, origin="lower")
-    plt.colorbar(label="|E| (V/m)")
-    plt.title("Test: analytical |E|")
-    plt.show()
+        im_n = ax_n.pcolormesh(y * 1e3, z * 1e3, E_num, shading="gouraud", cmap="viridis", vmin=0, vmax=1.5 * E0)
+        draw_plates(ax_n, ys)
+        ax_n.set_title(f"{name} (ys = {ys * 1e3:.0f} mm)")
 
-    print("max |E|:", E.max())
-    plt.imshow(E, origin="lower", vmax=150)
-    plt.colorbar(label="|E| (V/m)")
-    plt.title("Test: numerical |E|")
-    plt.show()
-
-    print("min, max:", dE.min(), dE.max())
-    plt.imshow(dE, origin="lower", cmap="viridis", vmin=-100, vmax=100)
-    plt.colorbar(label="numerical - analytical (V/m)")
-    plt.title("Test: field difference")
     plt.show()
 
 if __name__ == "__main__":
