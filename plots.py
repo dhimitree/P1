@@ -26,10 +26,16 @@ def analytical_E(y, z, ys):
 def main():
     y, z = make_grid()
 
-    V = solve_laplace(y, z, 0.0)     
+    ys = 0.0
+    V = solve_laplace(y, z, ys)     
     E = numerical_E(V)
-
+    
     E_ana = analytical_E(y, z, 0.0)
+
+    dE = numerical_E(V) - analytical_E(y, z, ys)
+    p1, p2, sh = geometry(y, z, ys)
+    dE[p1 | p2 | sh] = 0              
+    dE[0, :] = 0
 
     print("values:", np.unique(E_ana))
     plt.imshow(E_ana, origin="lower")
@@ -41,6 +47,12 @@ def main():
     plt.imshow(E, origin="lower", vmax=150)
     plt.colorbar(label="|E| (V/m)")
     plt.title("Test: numerical |E|")
+    plt.show()
+
+    print("min, max:", dE.min(), dE.max())
+    plt.imshow(dE, origin="lower", cmap="viridis", vmin=-100, vmax=100)
+    plt.colorbar(label="numerical - analytical (V/m)")
+    plt.title("Test: field difference")
     plt.show()
 
 if __name__ == "__main__":
