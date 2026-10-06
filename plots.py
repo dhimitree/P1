@@ -32,7 +32,8 @@ def analytical_E(y, z, ys):
     z_stop[(y >= ys - TOL) & (y <= ys + W + TOL)] = 2 * t_p + d 
     return np.where(z[:, None] > z_stop[None, :] + TOL, E0, 0.0)
 
-def main():
+def main(): 
+    FIG_DIR.mkdir(exist_ok=True)
     y, z = make_grid()
 
     fig_n, axs_n = plt.subplots(3, 1, figsize=(10, 7.5), layout="constrained")
@@ -49,13 +50,21 @@ def main():
         dE[0, :] = 0                            
 
         im_n = ax_n.pcolormesh(y * 1e3, z * 1e3, E_num, shading="gouraud", cmap="viridis", vmin=0, vmax=1.5 * E0)
-        draw_plates(ax_n, ys)
         im_d = ax_d.pcolormesh(y * 1e3, z * 1e3, dE, shading="gouraud", cmap="viridis", vmin=-E0, vmax=E0)
 
         for ax in (ax_n, ax_d):
             draw_plates(ax, ys)
             ax.set_title(f"{name} (ys = {ys * 1e3:.0f} mm)")
+    
+    axs_n[-1].set_xlabel("y (mm)")
+    axs_d[-1].set_xlabel("y (mm)")
+    fig_n.colorbar(im_n, ax=axs_n, label="|E| numerical (V/m)")
+    fig_d.colorbar(im_d, ax=axs_d, label="|E| numerical − |E| analytical (V/m)")
+    fig_n.suptitle("Numerical E-field magnitude")
+    fig_d.suptitle("Difference: numerical − analytical")
 
+    fig_n.savefig(FIG_DIR / "E_numerical_snapshots.png", dpi=200)
+    fig_d.savefig(FIG_DIR / "E_difference_snapshots.png", dpi=200)
     plt.show()
 
 if __name__ == "__main__":

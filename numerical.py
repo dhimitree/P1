@@ -14,8 +14,8 @@ Ez = -E0
 W = 20e-3
 L = 20e-3
 t_p = 1e-3
-gap = 0
-d = 5e-6
+gap = 1.20e-3
+d = 0.65e-3
 v = 1
 R = 100000000
 
@@ -24,7 +24,7 @@ R = 100000000
 h = 0.5e-3
 space = 20e-3
 H = 50e-3
-n_pos = 20 #number of shutter positions (laplace solves)
+n_pos = 40 #number of shutter positions (laplace solves)
 
 YS_CROSS_SECTION = 0 #(0 = shutter over plate 1)
 
