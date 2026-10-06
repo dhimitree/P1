@@ -17,11 +17,25 @@ def numerical_E(V):
     dVdz, dVdy = np.gradient(V, h, h)
     return np.hypot(dVdy, dVdz)
 
+def analytical_E(y, z, ys):
+    z_stop = np.zeros_like(y)                                   
+    z_stop[(y >= -TOL) & (y <= 2 * W + gap + TOL)] = t_p        
+    z_stop[(y >= ys - TOL) & (y <= ys + W + TOL)] = 2 * t_p + d 
+    return np.where(z[:, None] > z_stop[None, :] + TOL, E0, 0.0)
+
 def main():
     y, z = make_grid()
 
     V = solve_laplace(y, z, 0.0)     
     E = numerical_E(V)
+
+    E_ana = analytical_E(y, z, 0.0)
+
+    print("values:", np.unique(E_ana))
+    plt.imshow(E_ana, origin="lower")
+    plt.colorbar(label="|E| (V/m)")
+    plt.title("Test: analytical |E|")
+    plt.show()
 
     print("max |E|:", E.max())
     plt.imshow(E, origin="lower", vmax=150)
