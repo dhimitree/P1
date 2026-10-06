@@ -36,15 +36,25 @@ def main():
     y, z = make_grid()
 
     fig_n, axs_n = plt.subplots(3, 1, figsize=(10, 7.5), layout="constrained")
+    fig_d, axs_d = plt.subplots(3, 1, figsize=(10, 7.5), layout="constrained")
 
-    for (name, ys), ax_n in zip(SNAPSHOTS.items(), axs_n):
-        ys = np.round(ys / h) * h                # snap shutter to the grid
+
+    for (name, ys), ax_n, ax_d in zip(SNAPSHOTS.items(), axs_n, axs_d):
+        ys = np.round(ys / h) * h                
         V = solve_laplace(y, z, ys)
         E_num = numerical_E(V)
+        dE = E_num - analytical_E(y, z, ys)
+        p1, p2, sh = geometry(y, z, ys)
+        dE[p1 | p2 | sh] = 0                     
+        dE[0, :] = 0                            
 
         im_n = ax_n.pcolormesh(y * 1e3, z * 1e3, E_num, shading="gouraud", cmap="viridis", vmin=0, vmax=1.5 * E0)
         draw_plates(ax_n, ys)
-        ax_n.set_title(f"{name} (ys = {ys * 1e3:.0f} mm)")
+        im_d = ax_d.pcolormesh(y * 1e3, z * 1e3, dE, shading="gouraud", cmap="viridis", vmin=-E0, vmax=E0)
+
+        for ax in (ax_n, ax_d):
+            draw_plates(ax, ys)
+            ax.set_title(f"{name} (ys = {ys * 1e3:.0f} mm)")
 
     plt.show()
 
