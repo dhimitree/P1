@@ -28,8 +28,8 @@ def draw_plates(ax, ys):
 
 def analytical_E(y, z, ys):
     z_stop = np.zeros_like(y)                                   
-    z_stop[(y >= -TOL) & (y <= 2 * W + gap + TOL)] = t_p        
-    z_stop[(y >= ys - TOL) & (y <= ys + W + TOL)] = 2 * t_p + d 
+    z_stop[(y >= -TOL) & (y <= W + TOL)] = t_p        
+    z_stop[(y >= W + gap - TOL) & (y <= 2 * W + gap + TOL)] = t_p
     return np.where(z[:, None] > z_stop[None, :] + TOL, E0, 0.0)
 
 def current(ys, Q1, Q2):
@@ -51,8 +51,7 @@ def main():
     fig_nl, axs_nl = plt.subplots(3, 1, figsize=(10, 7.5), layout="constrained")
     fig_dl, axs_dl = plt.subplots(3, 1, figsize=(10, 7.5), layout="constrained")
 
-
-    for (name, ys), ax_n, ax_d in zip(SNAPSHOTS.items(), axs_n, axs_d):
+    for (name, ys), ax_n, ax_d, ax_nl, ax_dl in zip(SNAPSHOTS.items(), axs_n, axs_d, axs_nl, axs_dl):
         ys = np.round(ys / h) * h                
         V = solve_laplace(y, z, ys)
         E_num = numerical_E(V)
@@ -64,10 +63,10 @@ def main():
         im_n = ax_n.pcolormesh(y * 1e3, z * 1e3, E_num, shading="gouraud", cmap="viridis", vmin=0, vmax=1.5 * E0)
         im_d = ax_d.pcolormesh(y * 1e3, z * 1e3, dE, shading="gouraud", cmap="viridis", vmin=-E0, vmax=E0)
 
-        im_nl = axs_nl[0].pcolormesh(y * 1e3, z * 1e3, np.clip(E_num,0.1, None), shading="gouraud", cmap="viridis", norm=LogNorm(vmin=0.1 * E0, vmax=1.5 * E0))
-        im_dl = axs_dl[0].pcolormesh(y * 1e3, z * 1e3, dE, shading="gouraud", cmap="viridis", norm=SymLogNorm(linthresh=1 * E0, vmin=-E0, vmax=E0))
+        im_nl = ax_nl.pcolormesh(y * 1e3, z * 1e3, np.clip(E_num,0.1, None), shading="gouraud", cmap="viridis", norm=LogNorm(vmin=0.1, vmax=1.5 * E0))
+        im_dl = ax_dl.pcolormesh(y * 1e3, z * 1e3, dE, shading="gouraud", cmap="viridis", norm=SymLogNorm(linthresh=1 * E0, vmin=-E0, vmax=E0))
 
-        for ax in (ax_n, ax_d):
+        for ax in (ax_n, ax_d, ax_nl, ax_dl):
             draw_plates(ax, ys)
             ax.set_title(f"{name} (ys = {ys * 1e3:.0f} mm)")
     
