@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.colors import LogNorm, SymLogNorm
-from numerical import (E0, W, t_p, gap, v, d, h, TOL, FIG_DIR, make_grid, geometry, solve_laplace)
+from numerical import (E0, W, t_p, gap, v, d, h, TOL, FIG_DIR, R, n_pos, make_grid, geometry, solve_laplace, plate_charges, analytical_charges, to_time_domain)
 
 SNAPSHOTS = {
     "Shutter over left plate": 0.0,
@@ -30,17 +30,78 @@ def analytical_E(y, z, ys):
     z_stop = np.zeros_like(y)                                   
     z_stop[(y >= -TOL) & (y <= W + TOL)] = t_p        
     z_stop[(y >= W + gap - TOL) & (y <= 2 * W + gap + TOL)] = t_p
+    z_stop[(y >= ys - TOL) & (y <= ys + W + TOL)] = 2 * t_p + d
     return np.where(z[:, None] > z_stop[None, :] + TOL, E0, 0.0)
 
 def current(ys, Q1, Q2):
     td = W+ gap
-    T = 2 * t_p / d
+    T = 2 * td / v
     dQ1 = np.gradient(Q1, ys, edge_order=2)
     dQ2 = np.gradient(Q2, ys, edge_order=2)
     t = np.concatenate([ys / v, T / 2 + (td - ys[::-1]) / v])
     I1 = np.concatenate([v * dQ1, -v * dQ1[::-1]])
     I2 = np.concatenate([v * dQ2, -v * dQ2[::-1]])
     return t, I1, I2
+
+def line_plots():
+    y, z = make_grid()
+    ys = np.unique(np.round(np.linspace(0, W + gap, n_pos) / h) * h)
+    Q1 = np.zeros_like(ys)
+    Q2 = np.zeros_like(ys)
+    for k, pos in enumerate(ys):
+        V = solve_laplace(y, z, pos)
+        Q1[k], Q2[k] = plate_charges(V, y, z, pos)
+
+    ys_a = np.linspace(0, W + gap, 2001)
+    Q1_a, Q2_a = analytical_charges(ys_a)
+
+    t, I1, I2 = current(ys, Q1, Q2)
+    t_a, I1_a, I2_a = current(ys_a, Q1_a, Q2_a)
+    Vout, Vout_a = R * (I2 - I1), R * (I2_a - I1_a)
+    T = 2 * (W + gap) / v
+
+    Q1_t, Q2_t = np.concatenate([Q1, Q1[::-1]]), np.concatenate([Q2, Q2[::-1]])
+    Q1_at, Q2_at = np.concatenate([Q1_a, Q1_a[::-1]]), np.concatenate([Q2_a, Q2_a[::-1]])
+
+    plt.figure(figsize=(9, 4))
+    plt.plot(t_a * 1e3, Vout_a * 1e3, "k--", label="Analytical")
+    plt.plot(t * 1e3, Vout * 1e3, "o-", markersize=3, label="Numerical")
+    plt.xlim(0, T * 1e3)
+    plt.xlabel("Time (ms)")
+    plt.ylabel("$V_{out}$ (mV)")
+    plt.title("Transimpedance Amplifier Voltage")
+    plt.grid(alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "vout_period.png", dpi=200)
+
+    plt.figure(figsize=(9, 4))
+    plt.plot(t_a * 1e3, I1_a * 1e12, "--", color="tab:red", label="$I_1$ analytical")
+    plt.plot(t_a * 1e3, I2_a * 1e12, "--", color="tab:orange", label="$I_2$ analytical")
+    plt.plot(t * 1e3, I1 * 1e12, "o-", markersize=3, color="tab:red", label="$I_1$ numerical")
+    plt.plot(t * 1e3, I2 * 1e12, "o-", markersize=3, color="tab:orange", label="$I_2$ numerical")
+    plt.xlim(0, T * 1e3)
+    plt.xlabel("Time (ms)")
+    plt.ylabel("Current (pA)")
+    plt.title("Sense Plate Currents")
+    plt.grid(alpha=0.3)
+    plt.legend(ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.18), frameon=False)
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "currents_period.png", dpi=200)
+
+    plt.figure(figsize=(9, 4))
+    plt.plot(t_a * 1e3, Q1_at * 1e12, "--", color="tab:red", label="$Q_1$ analytical")
+    plt.plot(t_a * 1e3, Q2_at * 1e12, "--", color="tab:orange", label="$Q_2$ analytical")
+    plt.plot(t * 1e3, Q1_t * 1e12, "o-", markersize=3, color="tab:red", label="$Q_1$ numerical")
+    plt.plot(t * 1e3, Q2_t * 1e12, "o-", markersize=3, color="tab:orange", label="$Q_2$ numerical")
+    plt.xlim(0, T * 1e3)
+    plt.xlabel("Time (ms)")
+    plt.ylabel("Charge (pC)")
+    plt.title("Sense Plate Charge")
+    plt.grid(alpha=0.3)
+    plt.legend(ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.18), frameon=False)
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / "charges_period.png", dpi=200)
 
 def main(): 
     FIG_DIR.mkdir(exist_ok=True)
@@ -87,6 +148,8 @@ def main():
     fig_d.savefig(FIG_DIR / "E_difference_snapshots.png", dpi=200)
     fig_nl.savefig(FIG_DIR / "E_numerical_log.png", dpi=200)
     fig_dl.savefig(FIG_DIR / "E_difference_log.png", dpi=200)
+
+    line_plots()
     plt.show()
 
 if __name__ == "__main__":

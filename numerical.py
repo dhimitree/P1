@@ -14,8 +14,8 @@ Ez = -E0
 W = 20e-3
 L = 20e-3
 t_p = 1e-3
-gap = 1.20e-3
-d = 0.65e-3
+gap = 1e-3
+d = 3e-3
 v = 1
 R = 100000000
 
@@ -98,7 +98,7 @@ def solve_with_conductors(y, z, conductors):
         np.add.at(b, np.nonzero(~nb_free)[0], v_fix[nj[~nb_free], ni[~nb_free]])
 
     A = sp.csr_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))), shape=(n, n))
-    V= v_fix.copy()
+    V = v_fix.copy()
     V[jj, ii] = spla.spsolve(A, b)
     return V
 
